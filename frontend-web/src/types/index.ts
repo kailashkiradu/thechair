@@ -7,6 +7,14 @@ export interface User {
   createdAt: string
 }
 
+export interface UserProfile extends User {
+  noShowCount: number
+  restricted: boolean
+  totalBookings: number
+  cancelledBookings: number
+  noShowBookings: number
+}
+
 export interface AuthResponse {
   token?: string
   id: string

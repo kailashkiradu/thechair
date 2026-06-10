@@ -1,18 +1,22 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { MapPin, Phone, Mail, Clock, ChevronRight, Scissors } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { MapPin, Phone, Mail, Clock, ChevronRight, Scissors, Star, Heart } from 'lucide-react'
 import { format, addDays } from 'date-fns'
+import toast from 'react-hot-toast'
 import { salonsApi } from '../../api/salons'
 import { reviewsApi } from '../../api/reviews'
+import { usersApi } from '../../api/users'
+import { useAuthStore } from '../../store/authStore'
 import Navbar from '../../components/layout/Navbar'
-import { Star } from 'lucide-react'
 import Spinner from '../../components/ui/Spinner'
 import Button from '../../components/ui/Button'
 
 export default function SalonDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const qc = useQueryClient()
+  const { isAuthenticated } = useAuthStore()
   const [selectedService, setSelectedService] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'))
 
@@ -32,6 +36,24 @@ export default function SalonDetail() {
     queryKey: ['salon-reviews', id],
     queryFn: () => reviewsApi.getSalonReviews(id!),
     enabled: !!id,
+  })
+
+  const { data: isFavorite } = useQuery({
+    queryKey: ['favorite-status', id],
+    queryFn: () => usersApi.getFavoriteStatus(id!),
+    enabled: !!id && isAuthenticated(),
+  })
+
+  const { mutate: toggleFavorite } = useMutation({
+    mutationFn: () => isFavorite ? usersApi.removeFavorite(id!) : usersApi.addFavorite(id!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['favorite-status', id] })
+      qc.invalidateQueries({ queryKey: ['my-favorites'] })
+      toast.success(isFavorite ? 'Removed from favorites' : 'Added to favorites')
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Action failed')
+    },
   })
 
   const averageRating = reviews?.length
@@ -71,6 +93,20 @@ export default function SalonDetail() {
                     )}
                   </div>
                 </div>
+
+                {/* Favorite Heart Toggle Button */}
+                {isAuthenticated() && (
+                  <button
+                    onClick={() => toggleFavorite()}
+                    className={`p-2.5 rounded-full border transition-all ${
+                      isFavorite
+                        ? 'border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500/25'
+                        : 'border-chair-border hover:border-red-500/40 text-gray-400 hover:text-red-400'
+                    }`}
+                  >
+                    <Heart size={18} fill={isFavorite ? 'currentColor' : 'none'} />
+                  </button>
+                )}
               </div>
               <div className="flex flex-wrap gap-4 mt-3 text-sm text-gray-400">
                 <span className="flex items-center gap-1"><MapPin size={13} />{salon.address}, {salon.city}</span>

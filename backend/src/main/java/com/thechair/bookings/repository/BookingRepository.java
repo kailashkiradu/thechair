@@ -18,6 +18,8 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     List<Booking> findBySalonOrderByCreatedAtDesc(Salon salon);
     List<Booking> findAllByOrderByCreatedAtDesc();
     long countByStatus(BookingStatus status);
+    long countByCustomer(User customer);
+    long countByCustomerAndStatus(User customer, BookingStatus status);
 
     @Query("SELECT b FROM Booking b WHERE b.salon = :salon AND b.slot.date = :date")
     List<Booking> findBySalonAndSlotDate(@Param("salon") Salon salon, @Param("date") LocalDate date);

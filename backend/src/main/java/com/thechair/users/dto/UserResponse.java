@@ -18,6 +18,12 @@ public class UserResponse {
     private String role;
     private LocalDateTime createdAt;
 
+    private Integer noShowCount;
+    private boolean restricted;
+    private Long totalBookings;
+    private Long cancelledBookings;
+    private Long noShowBookings;
+
     public static UserResponse from(User user) {
         return UserResponse.builder()
                 .id(user.getId())
@@ -26,6 +32,24 @@ public class UserResponse {
                 .phone(user.getPhone())
                 .role(user.getRole().name())
                 .createdAt(user.getCreatedAt())
+                .noShowCount(user.getNoShowCount())
+                .restricted(user.isRestricted())
+                .build();
+    }
+
+    public static UserResponse from(User user, Long totalBookings, Long cancelledBookings, Long noShowBookings) {
+        return UserResponse.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .role(user.getRole().name())
+                .createdAt(user.getCreatedAt())
+                .noShowCount(user.getNoShowCount())
+                .restricted(user.isRestricted())
+                .totalBookings(totalBookings)
+                .cancelledBookings(cancelledBookings)
+                .noShowBookings(noShowBookings)
                 .build();
     }
 }

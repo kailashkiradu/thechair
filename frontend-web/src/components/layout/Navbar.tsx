@@ -44,10 +44,10 @@ export default function Navbar() {
                   Admin
                 </Link>
               )}
-              <div className="flex items-center gap-2 bg-chair-card border border-chair-border rounded-full px-3 py-1.5 text-sm">
+              <Link to="/profile" className="flex items-center gap-2 bg-chair-card border border-chair-border hover:border-chair-accent/40 rounded-full px-3 py-1.5 text-sm transition-colors cursor-pointer">
                 <User size={14} className="text-chair-accent" />
                 <span className="text-gray-300 max-w-[120px] truncate">{user?.name}</span>
-              </div>
+              </Link>
               <button onClick={handleLogout} className="text-gray-400 hover:text-red-400 transition-colors">
                 <LogOut size={18} />
               </button>

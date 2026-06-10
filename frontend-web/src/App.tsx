@@ -8,6 +8,7 @@ import Salons from './pages/customer/Salons'
 import SalonDetail from './pages/customer/SalonDetail'
 import Book from './pages/customer/Book'
 import MyBookings from './pages/customer/MyBookings'
+import Profile from './pages/customer/Profile'
 import OwnerDashboard from './pages/owner/Dashboard'
 import SalonSetup from './pages/owner/SalonSetup'
 import Services from './pages/owner/Services'
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="/salons/:id" element={<SalonDetail />} />
         <Route path="/salons/:id/book" element={<RequireAuth><Book /></RequireAuth>} />
         <Route path="/my-bookings" element={<RequireAuth><MyBookings /></RequireAuth>} />
+        <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
 
         {/* Owner */}
         <Route path="/owner" element={<RequireAuth role="OWNER"><OwnerDashboard /></RequireAuth>} />
