@@ -40,6 +40,10 @@ public class SalonOffering {
     @Builder.Default
     private boolean active = true;
 
+    @Column(name = "buffer_time", nullable = false)
+    @Builder.Default
+    private Integer bufferTime = 0;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

@@ -122,6 +122,7 @@ public class OwnerService {
                 .description(request.getDescription())
                 .duration(request.getDuration())
                 .price(request.getPrice())
+                .bufferTime(request.getBufferTime() != null ? request.getBufferTime() : 0)
                 .build();
         return OfferingResponse.from(offeringRepository.save(offering));
     }
@@ -133,6 +134,7 @@ public class OwnerService {
         offering.setDescription(request.getDescription());
         offering.setDuration(request.getDuration());
         offering.setPrice(request.getPrice());
+        offering.setBufferTime(request.getBufferTime() != null ? request.getBufferTime() : 0);
         return OfferingResponse.from(offeringRepository.save(offering));
     }
 

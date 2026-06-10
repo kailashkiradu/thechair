@@ -10,6 +10,41 @@ services:
       POSTGRES_PASSWORD: password
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - thechair-network
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: thechair-backend
+    ports:
+      - '9090:9090'
+    depends_on:
+      - postgres
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/thechair
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=password
+    networks:
+      - thechair-network
+
+  frontend:
+    build:
+      context: ../frontend-web
+      dockerfile: Dockerfile
+    container_name: thechair-frontend
+    ports:
+      - '5173:80'
+    depends_on:
+      - backend
+    networks:
+      - thechair-network
 
 volumes:
   pgdata:
+
+networks:
+  thechair-network:
+    driver: bridge

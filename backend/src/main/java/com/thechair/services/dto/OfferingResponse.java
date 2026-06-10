@@ -18,6 +18,7 @@ public class OfferingResponse {
     private Integer duration;
     private BigDecimal price;
     private boolean active;
+    private Integer bufferTime;
 
     public static OfferingResponse from(SalonOffering o) {
         return OfferingResponse.builder()
@@ -28,6 +29,7 @@ public class OfferingResponse {
                 .duration(o.getDuration())
                 .price(o.getPrice())
                 .active(o.isActive())
+                .bufferTime(o.getBufferTime())
                 .build();
     }
 }

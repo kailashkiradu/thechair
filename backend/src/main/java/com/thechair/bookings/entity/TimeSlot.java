@@ -34,6 +34,10 @@ public class TimeSlot {
     @JoinColumn(name = "staff_id")
     private com.thechair.staff.entity.Staff staff;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booking_id")
+    private Booking booking;
+
     @Column(nullable = false)
     private LocalDate date;
 

@@ -39,6 +39,14 @@ public class User {
     @Builder.Default
     private boolean enabled = true;
 
+    @Column(name = "no_show_count", nullable = false)
+    @Builder.Default
+    private Integer noShowCount = 0;
+
+    @Column(name = "is_restricted", nullable = false)
+    @Builder.Default
+    private boolean restricted = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
