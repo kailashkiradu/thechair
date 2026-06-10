@@ -95,4 +95,23 @@ export const ownerApi = {
 
   deleteGalleryItem: (itemId: string) =>
     api.delete<ApiResponse<void>>(`/owner/salon/gallery/${itemId}`),
+
+  // Analytics
+  getAnalyticsSummary: (startDate?: string, endDate?: string) =>
+    api.get<ApiResponse<any>>('/owner/analytics/summary', { params: { startDate, endDate } }).then(r => r.data.data),
+
+  getAnalyticsRevenueTrend: (startDate?: string, endDate?: string) =>
+    api.get<ApiResponse<any[]>>('/owner/analytics/revenue-trend', { params: { startDate, endDate } }).then(r => r.data.data),
+
+  getAnalyticsStylistPerformance: (startDate?: string, endDate?: string) =>
+    api.get<ApiResponse<any[]>>('/owner/analytics/stylist-performance', { params: { startDate, endDate } }).then(r => r.data.data),
+
+  getAnalyticsServicePopularity: (startDate?: string, endDate?: string) =>
+    api.get<ApiResponse<any[]>>('/owner/analytics/service-popularity', { params: { startDate, endDate } }).then(r => r.data.data),
+
+  exportAnalyticsCsv: (startDate?: string, endDate?: string) =>
+    api.get('/owner/analytics/export', {
+      params: { startDate, endDate },
+      responseType: 'blob'
+    }).then(r => r.data),
 }

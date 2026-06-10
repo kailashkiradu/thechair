@@ -15,6 +15,7 @@ import Services from './pages/owner/Services'
 import Staff from './pages/owner/Staff'
 import Slots from './pages/owner/Slots'
 import OwnerBookings from './pages/owner/Bookings'
+import Analytics from './pages/owner/Analytics'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminSalons from './pages/admin/Salons'
 import AdminUsers from './pages/admin/Users'
@@ -50,6 +51,7 @@ export default function App() {
         <Route path="/owner/staff" element={<RequireAuth role="OWNER"><Staff /></RequireAuth>} />
         <Route path="/owner/slots" element={<RequireAuth role="OWNER"><Slots /></RequireAuth>} />
         <Route path="/owner/bookings" element={<RequireAuth role="OWNER"><OwnerBookings /></RequireAuth>} />
+        <Route path="/owner/analytics" element={<RequireAuth role="OWNER"><Analytics /></RequireAuth>} />
 
         {/* Admin */}
         <Route path="/admin" element={<RequireAuth role="ADMIN"><AdminDashboard /></RequireAuth>} />

@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Store, Scissors, Clock, CalendarCheck, Users } from 'lucide-react'
+import { LayoutDashboard, Store, Scissors, Clock, CalendarCheck, Users, BarChart3 } from 'lucide-react'
 import Navbar from './Navbar'
 
 const links = [
@@ -10,6 +10,7 @@ const links = [
   { to: '/owner/staff', icon: Users, label: 'Stylists' },
   { to: '/owner/slots', icon: Clock, label: 'Slots' },
   { to: '/owner/bookings', icon: CalendarCheck, label: 'Bookings' },
+  { to: '/owner/analytics', icon: BarChart3, label: 'Analytics' },
 ]
 
 export default function OwnerLayout({ children }: { children: ReactNode }) {
