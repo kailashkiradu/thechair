@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { CalendarCheck, Clock, Scissors, Store, Users } from 'lucide-react'
+import { CalendarCheck, Clock, Scissors, Store, Users, ListPlus } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { ownerApi } from '../../api/owner'
+import { waitlistApi } from '../../api/waitlist'
 import { useAuthStore } from '../../store/authStore'
 import OwnerLayout from '../../components/layout/OwnerLayout'
 import Spinner from '../../components/ui/Spinner'
@@ -19,6 +20,12 @@ export default function OwnerDashboard() {
   const { data: bookings, isLoading: loadingBookings } = useQuery({
     queryKey: ['owner-bookings'],
     queryFn: ownerApi.getBookings,
+    enabled: !!salon,
+  })
+
+  const { data: waitlist, isLoading: loadingWaitlist } = useQuery({
+    queryKey: ['owner-waitlist'],
+    queryFn: waitlistApi.getOwnerWaitlist,
     enabled: !!salon,
   })
 
@@ -99,32 +106,62 @@ export default function OwnerDashboard() {
               ))}
             </div>
 
-            {/* Recent bookings */}
-            <div className="card">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold">Recent Bookings</h3>
-                <Link to="/owner/bookings" className="text-sm text-chair-accent hover:underline">View all</Link>
-              </div>
-              {loadingBookings ? (
-                <Spinner />
-              ) : !recent?.length ? (
-                <p className="text-gray-500 text-sm text-center py-6">No bookings yet.</p>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {recent.map((b) => (
-                    <div key={b.id} className="flex items-center justify-between py-3 border-b border-chair-border last:border-0">
-                      <div>
-                        <p className="font-medium text-sm">{b.customerName}</p>
-                        <p className="text-xs text-gray-500">{b.offeringName} · {b.date} {b.startTime}</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-semibold text-chair-accent">₹{b.totalAmount}</span>
-                        <Badge status={b.status} />
-                      </div>
-                    </div>
-                  ))}
+            {/* Dashboard Lists: Recent Bookings & Waitlist */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Recent bookings */}
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold">Recent Bookings</h3>
+                  <Link to="/owner/bookings" className="text-sm text-chair-accent hover:underline">View all</Link>
                 </div>
-              )}
+                {loadingBookings ? (
+                  <Spinner />
+                ) : !recent?.length ? (
+                  <p className="text-gray-500 text-sm text-center py-6">No bookings yet.</p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {recent.map((b) => (
+                      <div key={b.id} className="flex items-center justify-between py-3 border-b border-chair-border last:border-0">
+                        <div>
+                          <p className="font-medium text-sm">{b.customerName}</p>
+                          <p className="text-xs text-gray-500">{b.offeringName} · {b.date} {b.startTime}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-semibold text-chair-accent">₹{b.totalAmount}</span>
+                          <Badge status={b.status} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Active Waitlist */}
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold">Active Waitlist</h3>
+                </div>
+                {loadingWaitlist ? (
+                  <Spinner />
+                ) : !waitlist?.length ? (
+                  <p className="text-gray-500 text-sm text-center py-6">No clients on the waitlist.</p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {waitlist.map((w) => (
+                      <div key={w.id} className="flex items-center justify-between py-3 border-b border-chair-border last:border-0">
+                        <div>
+                          <p className="font-medium text-sm">{w.customerName}</p>
+                          <p className="text-xs text-gray-500">
+                            {w.offeringName} · {w.preferredDate} 
+                            {w.preferredTimeStart || w.preferredTimeEnd ? ` (${w.preferredTimeStart || 'Any'} - ${w.preferredTimeEnd || 'Any'})` : ''}
+                          </p>
+                        </div>
+                        <Badge status={w.status} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </>
         )}

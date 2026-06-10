@@ -66,7 +66,22 @@ export interface Offering {
   description?: string
   duration: number
   price: number
+  bufferTime?: number
   active: boolean
+}
+
+export interface Waitlist {
+  id: string
+  customerId: string
+  customerName: string
+  salonId: string
+  salonName: string
+  offeringId: string
+  offeringName: string
+  preferredDate: string
+  preferredTimeStart?: string
+  preferredTimeEnd?: string
+  status: 'PENDING' | 'NOTIFIED' | 'BOOKED' | 'EXPIRED'
 }
 
 export interface TimeSlot {

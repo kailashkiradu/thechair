@@ -6,6 +6,10 @@ import com.thechair.bookings.entity.Booking;
 import com.thechair.bookings.entity.TimeSlot;
 import com.thechair.users.entity.User;
 import com.thechair.bookings.entity.BookingStatus;
+import com.thechair.bookings.entity.PaymentStatus;
+import com.thechair.bookings.entity.Waitlist;
+import com.thechair.bookings.entity.WaitlistStatus;
+import com.thechair.bookings.repository.WaitlistRepository;
 import com.thechair.common.exception.BadRequestException;
 import com.thechair.common.exception.ConflictException;
 import com.thechair.common.exception.ResourceNotFoundException;
@@ -18,6 +22,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.thechair.salons.entity.Salon;
 import com.thechair.salons.repository.SalonRepository;
+import com.thechair.services.entity.SalonOffering;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,11 +39,16 @@ public class BookingService {
     private final TimeSlotRepository timeSlotRepository;
     private final UserRepository userRepository;
     private final SalonRepository salonRepository;
+    private final WaitlistRepository waitlistRepository;
 
     @Transactional
     public BookingResponse createBooking(BookingRequest request, String customerEmail) {
         User customer = userRepository.findByEmail(customerEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+
+        if (customer.isRestricted()) {
+            throw new BadRequestException("Your account is restricted from online bookings due to multiple no-shows. Please contact the salon.");
+        }
 
         TimeSlot slot = timeSlotRepository.findByIdWithLock(request.getSlotId())
                 .orElseThrow(() -> new ResourceNotFoundException("Slot not found"));
@@ -47,8 +61,51 @@ public class BookingService {
             throw new BadRequestException("Time slot is not assigned to a stylist");
         }
 
-        slot.setBooked(true);
-        timeSlotRepository.save(slot);
+        // Calculate total duration we need to block: service duration + buffer time
+        int totalRequiredDuration = slot.getOffering().getDuration() +
+                (slot.getOffering().getBufferTime() != null ? slot.getOffering().getBufferTime() : 0);
+
+        List<TimeSlot> stylistSlots = timeSlotRepository.findByStaffAndDateOrderByStartTime(slot.getStaff(), slot.getDate());
+
+        int startIndex = -1;
+        for (int i = 0; i < stylistSlots.size(); i++) {
+            if (stylistSlots.get(i).getId().equals(slot.getId())) {
+                startIndex = i;
+                break;
+            }
+        }
+
+        if (startIndex == -1) {
+            throw new BadRequestException("Start slot not found in stylist's schedule");
+        }
+
+        List<TimeSlot> slotsToBook = new ArrayList<>();
+        int accumulatedMinutes = 0;
+        int currentIndex = startIndex;
+
+        while (accumulatedMinutes < totalRequiredDuration) {
+            if (currentIndex >= stylistSlots.size()) {
+                throw new ConflictException("Insufficient consecutive slots to cover the service duration (" + totalRequiredDuration + " mins required)");
+            }
+
+            TimeSlot currentSlot = stylistSlots.get(currentIndex);
+
+            if (currentSlot.isBooked()) {
+                throw new ConflictException("One or more required consecutive slots are already booked");
+            }
+
+            if (!slotsToBook.isEmpty()) {
+                TimeSlot previousSlot = slotsToBook.get(slotsToBook.size() - 1);
+                if (!currentSlot.getStartTime().equals(previousSlot.getEndTime())) {
+                    throw new ConflictException("Gap detected in consecutive time slots. Stylist schedule must be contiguous.");
+                }
+            }
+
+            slotsToBook.add(currentSlot);
+            long slotMinutes = Duration.between(currentSlot.getStartTime(), currentSlot.getEndTime()).toMinutes();
+            accumulatedMinutes += slotMinutes;
+            currentIndex++;
+        }
 
         Booking booking = Booking.builder()
                 .customer(customer)
@@ -59,11 +116,21 @@ public class BookingService {
                 .customerName(customer.getName())
                 .customerPhone(customer.getPhone())
                 .bookingType("ONLINE")
+                .status(BookingStatus.CONFIRMED)
+                .paymentStatus(PaymentStatus.PENDING)
                 .totalAmount(slot.getOffering().getPrice())
                 .notes(request.getNotes())
                 .build();
 
-        return BookingResponse.from(bookingRepository.save(booking));
+        Booking savedBooking = bookingRepository.save(booking);
+
+        for (TimeSlot ts : slotsToBook) {
+            ts.setBooked(true);
+            ts.setBooking(savedBooking);
+            timeSlotRepository.save(ts);
+        }
+
+        return BookingResponse.from(savedBooking);
     }
 
     public List<BookingResponse> getMyBookings(String customerEmail) {
@@ -86,10 +153,28 @@ public class BookingService {
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
-        booking.getSlot().setBooked(false);
-        timeSlotRepository.save(booking.getSlot());
+        
+        List<TimeSlot> slotsToFree = booking.getConsecutiveSlots();
+        if (slotsToFree != null && !slotsToFree.isEmpty()) {
+            for (TimeSlot ts : slotsToFree) {
+                ts.setBooked(false);
+                ts.setBooking(null);
+                timeSlotRepository.save(ts);
+            }
+        } else {
+            booking.getSlot().setBooked(false);
+            booking.getSlot().setBooking(null);
+            timeSlotRepository.save(booking.getSlot());
+        }
 
-        return BookingResponse.from(bookingRepository.save(booking));
+        Booking saved = bookingRepository.save(booking);
+
+        // Notify waitlist candidates for the freed slot range
+        notifyWaitlistForFreedSlots(booking.getSalon(), booking.getOffering(),
+                booking.getSlot().getDate(), booking.getSlot().getStartTime(),
+                booking.getSlot().getEndTime());
+
+        return BookingResponse.from(saved);
     }
 
     @Transactional
@@ -112,8 +197,51 @@ public class BookingService {
             throw new BadRequestException("Time slot is not assigned to a stylist");
         }
 
-        slot.setBooked(true);
-        timeSlotRepository.save(slot);
+        // Calculate total duration we need to block: service duration + buffer time
+        int totalRequiredDuration = slot.getOffering().getDuration() +
+                (slot.getOffering().getBufferTime() != null ? slot.getOffering().getBufferTime() : 0);
+
+        List<TimeSlot> stylistSlots = timeSlotRepository.findByStaffAndDateOrderByStartTime(slot.getStaff(), slot.getDate());
+
+        int startIndex = -1;
+        for (int i = 0; i < stylistSlots.size(); i++) {
+            if (stylistSlots.get(i).getId().equals(slot.getId())) {
+                startIndex = i;
+                break;
+            }
+        }
+
+        if (startIndex == -1) {
+            throw new BadRequestException("Start slot not found in stylist's schedule");
+        }
+
+        List<TimeSlot> slotsToBook = new ArrayList<>();
+        int accumulatedMinutes = 0;
+        int currentIndex = startIndex;
+
+        while (accumulatedMinutes < totalRequiredDuration) {
+            if (currentIndex >= stylistSlots.size()) {
+                throw new ConflictException("Insufficient consecutive slots to cover the service duration (" + totalRequiredDuration + " mins required)");
+            }
+
+            TimeSlot currentSlot = stylistSlots.get(currentIndex);
+
+            if (currentSlot.isBooked()) {
+                throw new ConflictException("One or more required consecutive slots are already booked");
+            }
+
+            if (!slotsToBook.isEmpty()) {
+                TimeSlot previousSlot = slotsToBook.get(slotsToBook.size() - 1);
+                if (!currentSlot.getStartTime().equals(previousSlot.getEndTime())) {
+                    throw new ConflictException("Gap detected in consecutive time slots. Stylist schedule must be contiguous.");
+                }
+            }
+
+            slotsToBook.add(currentSlot);
+            long slotMinutes = Duration.between(currentSlot.getStartTime(), currentSlot.getEndTime()).toMinutes();
+            accumulatedMinutes += slotMinutes;
+            currentIndex++;
+        }
 
         Booking booking = Booking.builder()
                 .salon(salon)
@@ -124,11 +252,41 @@ public class BookingService {
                 .customerPhone(request.getCustomerPhone())
                 .bookingType("WALK_IN")
                 .status(BookingStatus.CONFIRMED)
-                .paymentStatus(com.thechair.bookings.entity.PaymentStatus.PENDING)
+                .paymentStatus(PaymentStatus.PENDING)
                 .totalAmount(slot.getOffering().getPrice())
                 .notes(request.getNotes())
                 .build();
 
-        return BookingResponse.from(bookingRepository.save(booking));
+        Booking savedBooking = bookingRepository.save(booking);
+
+        for (TimeSlot ts : slotsToBook) {
+            ts.setBooked(true);
+            ts.setBooking(savedBooking);
+            timeSlotRepository.save(ts);
+        }
+
+        return BookingResponse.from(savedBooking);
+    }
+
+    private void notifyWaitlistForFreedSlots(Salon salon, SalonOffering offering, LocalDate date, LocalTime startTime, LocalTime endTime) {
+        List<Waitlist> pendingList = waitlistRepository.findBySalonAndOfferingAndPreferredDateAndStatus(
+                salon, offering, date, WaitlistStatus.PENDING);
+
+        for (Waitlist entry : pendingList) {
+            boolean timeMatches = true;
+            if (entry.getPreferredTimeStart() != null && entry.getPreferredTimeStart().isAfter(startTime)) {
+                timeMatches = false;
+            }
+            if (entry.getPreferredTimeEnd() != null && entry.getPreferredTimeEnd().isBefore(endTime)) {
+                timeMatches = false;
+            }
+
+            if (timeMatches) {
+                entry.setStatus(WaitlistStatus.NOTIFIED);
+                waitlistRepository.save(entry);
+                System.out.println("NOTIFY: Waitlist candidate " + entry.getCustomer().getName() +
+                        " (email: " + entry.getCustomer().getEmail() + ") notified of freed slot at " + startTime + " on " + date);
+            }
+        }
     }
 }

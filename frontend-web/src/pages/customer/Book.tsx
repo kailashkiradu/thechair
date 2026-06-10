@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Clock, CheckCircle } from 'lucide-react'
+import { Clock, CheckCircle, ListPlus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { salonsApi } from '../../api/salons'
 import { bookingsApi } from '../../api/bookings'
+import { waitlistApi } from '../../api/waitlist'
 import Navbar from '../../components/layout/Navbar'
 import Spinner from '../../components/ui/Spinner'
 import Button from '../../components/ui/Button'
+import Modal from '../../components/ui/Modal'
 
 export default function Book() {
   const { id: salonId } = useParams<{ id: string }>()
@@ -18,6 +20,11 @@ export default function Book() {
   const date = params.get('date') ?? ''
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
   const [notes, setNotes] = useState('')
+
+  // Waitlist States
+  const [waitlistModal, setWaitlistModal] = useState(false)
+  const [prefTimeStart, setPrefTimeStart] = useState('')
+  const [prefTimeEnd, setPrefTimeEnd] = useState('')
 
   const { data: slots, isLoading } = useQuery({
     queryKey: ['slots', salonId, serviceId, date],
@@ -37,6 +44,25 @@ export default function Book() {
     },
   })
 
+  const { mutate: joinWaitlist, isPending: isJoiningWaitlist } = useMutation({
+    mutationFn: () => waitlistApi.join({
+      salonId: salonId!,
+      offeringId: serviceId,
+      preferredDate: date,
+      preferredTimeStart: prefTimeStart || undefined,
+      preferredTimeEnd: prefTimeEnd || undefined,
+    }),
+    onSuccess: () => {
+      toast.success('Successfully joined the waitlist!')
+      setWaitlistModal(false)
+      qc.invalidateQueries({ queryKey: ['my-waitlists'] })
+      navigate('/my-bookings?tab=waitlists')
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to join waitlist')
+    },
+  })
+
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -47,10 +73,18 @@ export default function Book() {
         {isLoading ? (
           <Spinner />
         ) : !slots?.length ? (
-          <div className="card text-center py-12">
-            <Clock size={36} className="mx-auto text-gray-600 mb-3" />
-            <p className="text-gray-400">No available slots for this date.</p>
-            <p className="text-sm text-gray-500 mt-1">Try selecting a different date.</p>
+          <div className="card text-center py-12 flex flex-col items-center">
+            <Clock size={36} className="text-gray-600 mb-3" />
+            <p className="text-gray-400 mb-2">No available slots for this date.</p>
+            <p className="text-sm text-gray-500 mb-6">Try selecting a different date or join the waitlist to be notified of openings.</p>
+            <Button
+              variant="secondary"
+              onClick={() => setWaitlistModal(true)}
+              className="flex items-center gap-2"
+            >
+              <ListPlus size={16} />
+              Join Waitlist
+            </Button>
           </div>
         ) : (
           <>
@@ -97,6 +131,46 @@ export default function Book() {
           </>
         )}
       </div>
+
+      {/* Waitlist Modal */}
+      <Modal open={waitlistModal} onClose={() => setWaitlistModal(false)} title="Join Waitlist">
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-gray-400">
+            Get notified immediately if another client cancels their appointment. 
+            You can optionally restrict notification to a specific time slot range.
+          </p>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-gray-300">From Time (optional)</label>
+              <input
+                type="time"
+                className="input-field"
+                value={prefTimeStart}
+                onChange={e => setPrefTimeStart(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-gray-300">To Time (optional)</label>
+              <input
+                type="time"
+                className="input-field"
+                value={prefTimeEnd}
+                onChange={e => setPrefTimeEnd(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <Button
+            className="w-full mt-4"
+            loading={isJoiningWaitlist}
+            onClick={() => joinWaitlist()}
+          >
+            <ListPlus size={16} />
+            Join Waitlist
+          </Button>
+        </div>
+      </Modal>
     </div>
   )
 }

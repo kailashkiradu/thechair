@@ -10,7 +10,7 @@ import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
 
-const emptyForm = { name: '', description: '', duration: 30, price: 0 }
+const emptyForm = { name: '', description: '', duration: 30, price: 0, bufferTime: 0 }
 
 export default function Services() {
   const qc = useQueryClient()
@@ -87,7 +87,7 @@ export default function Services() {
   const openAdd = () => { setEditing(null); setForm(emptyForm); setModal(true) }
   const openEdit = (s: Offering) => {
     setEditing(s)
-    setForm({ name: s.name, description: s.description ?? '', duration: s.duration, price: s.price })
+    setForm({ name: s.name, description: s.description ?? '', duration: s.duration, price: s.price, bufferTime: s.bufferTime ?? 0 })
     setModal(true)
   }
 
@@ -173,7 +173,9 @@ export default function Services() {
                 <div key={s.id} className="card flex items-center justify-between">
                   <div>
                     <p className="font-semibold">{s.name}</p>
-                    <p className="text-sm text-gray-500 mt-0.5">{s.duration} min · ₹{s.price}</p>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                      {s.duration} min {s.bufferTime ? `(+ ${s.bufferTime} min buffer)` : ''} · ₹{s.price}
+                    </p>
                     {s.description && <p className="text-xs text-gray-600 mt-1">{s.description}</p>}
                   </div>
                   <div className="flex gap-2">
@@ -253,8 +255,9 @@ export default function Services() {
               <label className="text-sm font-medium text-gray-300">Description</label>
               <textarea className="input-field resize-none" rows={2} value={form.description} onChange={set('description')} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <Input label="Duration (min) *" type="number" min={15} value={form.duration} onChange={set('duration')} required />
+              <Input label="Buffer (min)" type="number" min={0} value={form.bufferTime} onChange={set('bufferTime')} />
               <Input label="Price (₹) *" type="number" min={1} value={form.price} onChange={set('price')} required />
             </div>
             <Button type="submit" loading={isPending} className="w-full">

@@ -40,6 +40,9 @@ public class Booking {
     @JoinColumn(name = "slot_id", nullable = false)
     private TimeSlot slot;
 
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL)
+    private java.util.List<TimeSlot> consecutiveSlots;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "staff_id", nullable = false)
     private com.thechair.staff.entity.Staff staff;

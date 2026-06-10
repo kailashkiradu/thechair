@@ -8,6 +8,10 @@ const colors: Record<string, string> = {
   CANCELLED: 'bg-red-900/40 text-red-400 border-red-800',
   PAID: 'bg-green-900/40 text-green-400 border-green-800',
   REFUNDED: 'bg-purple-900/40 text-purple-400 border-purple-800',
+  NOTIFIED: 'bg-indigo-900/40 text-indigo-400 border-indigo-800',
+  BOOKED: 'bg-green-900/40 text-green-400 border-green-800',
+  EXPIRED: 'bg-gray-800 text-gray-500 border-gray-700',
+  NO_SHOW: 'bg-red-900/40 text-red-400 border-red-800',
 }
 
 export default function Badge({ status }: { status: string }) {

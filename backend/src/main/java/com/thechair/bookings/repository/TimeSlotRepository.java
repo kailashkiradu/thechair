@@ -21,6 +21,8 @@ public interface TimeSlotRepository extends JpaRepository<TimeSlot, UUID> {
 
     List<TimeSlot> findByStaffAndDate(com.thechair.staff.entity.Staff staff, LocalDate date);
 
+    List<TimeSlot> findByStaffAndDateOrderByStartTime(com.thechair.staff.entity.Staff staff, LocalDate date);
+
     List<TimeSlot> findBySalonAndOfferingAndDateOrderByStartTime(Salon salon, SalonOffering offering, LocalDate date);
 
     boolean existsBySalonAndOfferingAndDateAndStartTime(Salon salon, SalonOffering offering, LocalDate date, LocalTime startTime);
