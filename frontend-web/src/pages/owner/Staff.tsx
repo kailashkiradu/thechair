@@ -1,0 +1,187 @@
+import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Plus, Users, ToggleLeft, ToggleRight, Trash2, Edit2 } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { ownerApi } from '../../api/owner'
+import OwnerLayout from '../../components/layout/OwnerLayout'
+import Spinner from '../../components/ui/Spinner'
+import Button from '../../components/ui/Button'
+import Modal from '../../components/ui/Modal'
+import Input from '../../components/ui/Input'
+
+export default function Staff() {
+  const qc = useQueryClient()
+  const [modal, setModal] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [form, setForm] = useState({
+    name: '', specialty: '', experienceYears: 1, photoUrl: ''
+  })
+
+  const { data: staffList, isLoading } = useQuery({
+    queryKey: ['owner-staff'],
+    queryFn: ownerApi.getStaff,
+  })
+
+  const { mutate: save, isPending } = useMutation({
+    mutationFn: (data: typeof form) => {
+      if (editingId) {
+        return ownerApi.updateStaff(editingId, data)
+      }
+      return ownerApi.addStaff(data)
+    },
+    onSuccess: () => {
+      toast.success(editingId ? 'Stylist updated!' : 'Stylist added!')
+      qc.invalidateQueries({ queryKey: ['owner-staff'] })
+      setModal(false)
+      resetForm()
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to save stylist'),
+  })
+
+  const { mutate: toggleAvailability } = useMutation({
+    mutationFn: ownerApi.toggleStaffAvailability,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['owner-staff'] })
+      toast.success('Availability updated')
+    },
+    onError: () => toast.error('Failed to update availability'),
+  })
+
+  const { mutate: remove } = useMutation({
+    mutationFn: ownerApi.deleteStaff,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['owner-staff'] })
+      toast.success('Stylist removed')
+    },
+    onError: () => toast.error('Failed to remove stylist'),
+  })
+
+  const resetForm = () => {
+    setForm({ name: '', specialty: '', experienceYears: 1, photoUrl: '' })
+    setEditingId(null)
+  }
+
+  const handleEdit = (s: any) => {
+    setEditingId(s.id)
+    setForm({
+      name: s.name,
+      specialty: s.specialty || '',
+      experienceYears: s.experienceYears || 1,
+      photoUrl: s.photoUrl || ''
+    })
+    setModal(true)
+  }
+
+  const handleDelete = (id: string) => {
+    if (confirm('Are you sure you want to remove this stylist?')) {
+      remove(id)
+    }
+  }
+
+  return (
+    <OwnerLayout>
+      <div>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">Stylists & Staff</h1>
+            <p className="text-gray-400 text-sm mt-0.5">Manage your salon's stylists and their availability.</p>
+          </div>
+          <Button onClick={() => { resetForm(); setModal(true) }} size="sm">
+            <Plus size={15} /> Add Stylist
+          </Button>
+        </div>
+
+        {isLoading ? <Spinner /> : !staffList?.length ? (
+          <div className="card text-center py-12">
+            <Users size={36} className="mx-auto text-gray-700 mb-3" />
+            <p className="text-gray-400">No stylists registered yet.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {staffList.map((s) => (
+              <div key={s.id} className="card flex items-start gap-4 p-4 border border-chair-border hover:border-chair-accent/40 transition-colors">
+                <div className="w-14 h-14 rounded-full bg-chair-surface border border-chair-border flex items-center justify-center shrink-0 overflow-hidden">
+                  {s.photoUrl ? (
+                    <img src={s.photoUrl} alt={s.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <Users size={24} className="text-gray-500" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <h2 className="font-semibold text-lg truncate">{s.name}</h2>
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={() => handleEdit(s)} className="text-gray-400 hover:text-white p-1">
+                        <Edit2 size={14} />
+                      </button>
+                      <button onClick={() => handleDelete(s.id)} className="text-gray-400 hover:text-red-500 p-1">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-sm text-chair-accent mt-0.5">{s.specialty || 'General Hairstylist'}</p>
+                  <p className="text-xs text-gray-400 mt-1">{s.experienceYears} Years Experience</p>
+
+                  <div className="flex items-center justify-between mt-4 pt-3 border-t border-chair-border">
+                    <span className="text-xs text-gray-400">Status</span>
+                    <button
+                      onClick={() => toggleAvailability(s.id)}
+                      className={`flex items-center gap-1 text-sm font-medium transition-colors
+                        ${s.available ? 'text-green-500' : 'text-red-500'}`}
+                    >
+                      {s.available ? (
+                        <>
+                          <ToggleRight size={20} className="text-green-500" /> Available
+                        </>
+                      ) : (
+                        <>
+                          <ToggleLeft size={20} className="text-red-500" /> Unavailable
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <Modal open={modal} onClose={() => setModal(false)} title={editingId ? 'Edit Stylist' : 'Add Stylist'}>
+          <form onSubmit={(e) => { e.preventDefault(); save(form) }} className="flex flex-col gap-4">
+            <Input
+              label="Full Name *"
+              value={form.name}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              required
+            />
+            <Input
+              label="Specialty (e.g., Hair Coloring, Haircuts)"
+              value={form.specialty}
+              onChange={e => setForm(f => ({ ...f, specialty: e.target.value }))}
+              placeholder="e.g. Master Stylist, Color expert"
+            />
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-gray-300">Experience (Years)</label>
+              <input
+                type="number"
+                min="0"
+                className="input-field"
+                value={form.experienceYears}
+                onChange={e => setForm(f => ({ ...f, experienceYears: parseInt(e.target.value) || 0 }))}
+              />
+            </div>
+            <Input
+              label="Photo URL"
+              value={form.photoUrl}
+              onChange={e => setForm(f => ({ ...f, photoUrl: e.target.value }))}
+              placeholder="https://images.unsplash.com/..."
+            />
+            <Button type="submit" loading={isPending} className="w-full mt-2">
+              {editingId ? 'Update Stylist' : 'Onboard Stylist'}
+            </Button>
+          </form>
+        </Modal>
+      </div>
+    </OwnerLayout>
+  )
+}

@@ -41,7 +41,7 @@ cd backend && mvn spring-boot:run
 # Swagger: http://localhost:9090/swagger-ui.html
 
 # Frontend
-cd frontend && npm install && npm run dev
+cd frontend-web && npm install && npm run dev
 # Opens on http://localhost:5173
 ```
 
