@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Users, ToggleLeft, ToggleRight, Trash2, Edit2 } from 'lucide-react'
+import { Plus, Users, ToggleLeft, ToggleRight, Trash2, Edit2, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { ownerApi } from '../../api/owner'
 import OwnerLayout from '../../components/layout/OwnerLayout'
@@ -17,9 +17,22 @@ export default function Staff() {
     name: '', specialty: '', experienceYears: 1, photoUrl: ''
   })
 
+  // Leaves management states
+  const [selectedStaff, setSelectedStaff] = useState<any | null>(null)
+  const [leavesModal, setLeavesModal] = useState(false)
+  const [leaveForm, setLeaveForm] = useState({
+    leaveDate: '', isFullDay: true, startTime: '', endTime: '', reason: ''
+  })
+
   const { data: staffList, isLoading } = useQuery({
     queryKey: ['owner-staff'],
     queryFn: ownerApi.getStaff,
+  })
+
+  const { data: leavesList, refetch: refetchLeaves, isLoading: leavesLoading } = useQuery({
+    queryKey: ['staff-leaves', selectedStaff?.id],
+    queryFn: () => selectedStaff ? ownerApi.getStaffLeaves(selectedStaff.id) : Promise.resolve([]),
+    enabled: !!selectedStaff
   })
 
   const { mutate: save, isPending } = useMutation({
@@ -56,6 +69,33 @@ export default function Staff() {
     onError: () => toast.error('Failed to remove stylist'),
   })
 
+  const { mutate: logLeave, isPending: loggingLeave } = useMutation({
+    mutationFn: (data: typeof leaveForm) => {
+      if (!selectedStaff) throw new Error("No stylist selected")
+      return ownerApi.addStaffLeave(selectedStaff.id, {
+        leaveDate: data.leaveDate,
+        startTime: data.isFullDay ? null : data.startTime,
+        endTime: data.isFullDay ? null : data.endTime,
+        reason: data.reason
+      })
+    },
+    onSuccess: () => {
+      toast.success('Leave logged successfully')
+      refetchLeaves()
+      setLeaveForm({ leaveDate: '', isFullDay: true, startTime: '', endTime: '', reason: '' })
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to log leave')
+  })
+
+  const { mutate: removeLeave } = useMutation({
+    mutationFn: (leaveId: string) => ownerApi.deleteStaffLeave(leaveId),
+    onSuccess: () => {
+      toast.success('Leave removed')
+      refetchLeaves()
+    },
+    onError: () => toast.error('Failed to remove leave')
+  })
+
   const resetForm = () => {
     setForm({ name: '', specialty: '', experienceYears: 1, photoUrl: '' })
     setEditingId(null)
@@ -84,7 +124,7 @@ export default function Staff() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold">Stylists & Staff</h1>
-            <p className="text-gray-400 text-sm mt-0.5">Manage your salon's stylists and their availability.</p>
+            <p className="text-gray-400 text-sm mt-0.5">Manage your salon's stylists, availability, and scheduled leaves.</p>
           </div>
           <Button onClick={() => { resetForm(); setModal(true) }} size="sm">
             <Plus size={15} /> Add Stylist
@@ -123,7 +163,16 @@ export default function Staff() {
                   <p className="text-xs text-gray-400 mt-1">{s.experienceYears} Years Experience</p>
 
                   <div className="flex items-center justify-between mt-4 pt-3 border-t border-chair-border">
-                    <span className="text-xs text-gray-400">Status</span>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        setSelectedStaff(s)
+                        setLeavesModal(true)
+                      }}
+                    >
+                      <Calendar size={14} /> Leaves
+                    </Button>
                     <button
                       onClick={() => toggleAvailability(s.id)}
                       className={`flex items-center gap-1 text-sm font-medium transition-colors
@@ -180,6 +229,103 @@ export default function Staff() {
               {editingId ? 'Update Stylist' : 'Onboard Stylist'}
             </Button>
           </form>
+        </Modal>
+
+        <Modal
+          open={leavesModal}
+          onClose={() => {
+            setLeavesModal(false)
+            setSelectedStaff(null)
+          }}
+          title={`Manage Leaves - ${selectedStaff?.name}`}
+        >
+          <div className="flex flex-col gap-6 max-h-[75vh] overflow-y-auto pr-1">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                logLeave(leaveForm)
+              }}
+              className="flex flex-col gap-3 p-4 bg-chair-surface rounded-lg border border-chair-border"
+            >
+              <h3 className="font-semibold text-sm text-chair-accent">Log New Leave</h3>
+              <Input
+                type="date"
+                label="Date *"
+                value={leaveForm.leaveDate}
+                onChange={(e) => setLeaveForm((f) => ({ ...f, leaveDate: e.target.value }))}
+                required
+              />
+              <div className="flex items-center gap-2 my-1">
+                <input
+                  type="checkbox"
+                  id="isFullDay"
+                  checked={leaveForm.isFullDay}
+                  onChange={(e) => setLeaveForm((f) => ({ ...f, isFullDay: e.target.checked }))}
+                  className="rounded border-chair-border text-chair-accent focus:ring-chair-accent bg-chair-surface"
+                />
+                <label htmlFor="isFullDay" className="text-sm text-gray-300">Full Day Leave</label>
+              </div>
+
+              {!leaveForm.isFullDay && (
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    type="time"
+                    label="Start Time *"
+                    value={leaveForm.startTime}
+                    onChange={(e) => setLeaveForm((f) => ({ ...f, startTime: e.target.value }))}
+                    required
+                  />
+                  <Input
+                    type="time"
+                    label="End Time *"
+                    value={leaveForm.endTime}
+                    onChange={(e) => setLeaveForm((f) => ({ ...f, endTime: e.target.value }))}
+                    required
+                  />
+                </div>
+              )}
+
+              <Input
+                label="Reason / Notes"
+                value={leaveForm.reason}
+                onChange={(e) => setLeaveForm((f) => ({ ...f, reason: e.target.value }))}
+                placeholder="e.g. Personal emergency, Vacation"
+              />
+
+              <Button type="submit" loading={loggingLeave} size="sm" className="mt-2 w-full">
+                Log Leave
+              </Button>
+            </form>
+
+            <div>
+              <h3 className="font-semibold text-sm text-gray-300 mb-3">Scheduled Leaves</h3>
+              {leavesLoading ? (
+                <Spinner />
+              ) : !leavesList?.length ? (
+                <p className="text-xs text-gray-500">No leaves logged for this stylist.</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {leavesList.map((l: any) => (
+                    <div key={l.id} className="flex items-center justify-between p-3 bg-chair-card border border-chair-border rounded-lg text-sm">
+                      <div>
+                        <div className="font-medium text-white">{l.leaveDate}</div>
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          {l.startTime && l.endTime ? `${l.startTime.substring(0, 5)} - ${l.endTime.substring(0, 5)}` : 'Full Day'}
+                        </div>
+                        {l.reason && <div className="text-xs text-chair-accent mt-1">{l.reason}</div>}
+                      </div>
+                      <button
+                        onClick={() => removeLeave(l.id)}
+                        className="text-gray-400 hover:text-red-500 p-1"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </Modal>
       </div>
     </OwnerLayout>

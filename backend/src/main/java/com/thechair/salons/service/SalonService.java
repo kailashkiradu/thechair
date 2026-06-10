@@ -10,6 +10,10 @@ import com.thechair.common.exception.ResourceNotFoundException;
 import com.thechair.services.repository.SalonOfferingRepository;
 import com.thechair.salons.repository.SalonRepository;
 import com.thechair.bookings.repository.TimeSlotRepository;
+import com.thechair.salons.repository.SalonGalleryRepository;
+import com.thechair.salons.dto.SalonGalleryResponse;
+import com.thechair.services.repository.ServicePackageRepository;
+import com.thechair.services.dto.ServicePackageResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +30,8 @@ public class SalonService {
     private final SalonRepository salonRepository;
     private final SalonOfferingRepository offeringRepository;
     private final TimeSlotRepository timeSlotRepository;
+    private final SalonGalleryRepository salonGalleryRepository;
+    private final ServicePackageRepository servicePackageRepository;
 
     public List<SalonResponse> getApprovedSalons(String query) {
         List<Salon> salons = (query != null && !query.isBlank())
@@ -63,5 +69,19 @@ public class SalonService {
             throw new ResourceNotFoundException("Salon not found");
         }
         return salon;
+    }
+
+    public List<SalonGalleryResponse> getSalonGallery(UUID salonId) {
+        Salon salon = findApprovedSalon(salonId);
+        return salonGalleryRepository.findBySalonId(salon.getId()).stream()
+                .map(SalonGalleryResponse::from)
+                .toList();
+    }
+
+    public List<ServicePackageResponse> getSalonPackages(UUID salonId) {
+        Salon salon = findApprovedSalon(salonId);
+        return servicePackageRepository.findBySalonAndActiveTrue(salon).stream()
+                .map(ServicePackageResponse::from)
+                .toList();
     }
 }

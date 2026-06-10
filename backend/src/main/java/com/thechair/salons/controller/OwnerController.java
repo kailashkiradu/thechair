@@ -7,10 +7,16 @@ import com.thechair.common.dto.ApiResponse;
 import com.thechair.bookings.dto.BookingResponse;
 import com.thechair.bookings.dto.BookingRequest;
 import com.thechair.services.dto.OfferingResponse;
+import com.thechair.services.dto.ServicePackageRequest;
+import com.thechair.services.dto.ServicePackageResponse;
 import com.thechair.salons.dto.SalonResponse;
 import com.thechair.bookings.dto.SlotResponse;
 import com.thechair.salons.service.OwnerService;
 import com.thechair.bookings.service.BookingService;
+import com.thechair.salons.dto.SalonExceptionRequest;
+import com.thechair.salons.dto.SalonExceptionResponse;
+import com.thechair.salons.dto.SalonGalleryRequest;
+import com.thechair.salons.dto.SalonGalleryResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -112,5 +118,76 @@ public class OwnerController {
             @AuthenticationPrincipal UserDetails u) {
         return ResponseEntity.ok(ApiResponse.success(
                 ownerService.updateBookingStatus(id, body.get("status"), u.getUsername())));
+    }
+
+    @PostMapping("/salon/exceptions")
+    public ResponseEntity<ApiResponse<SalonExceptionResponse>> addSalonException(
+            @Valid @RequestBody SalonExceptionRequest request,
+            @AuthenticationPrincipal UserDetails u) {
+        return ResponseEntity.ok(ApiResponse.success(ownerService.addSalonException(request, u.getUsername())));
+    }
+
+    @GetMapping("/salon/exceptions")
+    public ResponseEntity<ApiResponse<List<SalonExceptionResponse>>> getSalonExceptions(
+            @AuthenticationPrincipal UserDetails u) {
+        return ResponseEntity.ok(ApiResponse.success(ownerService.getSalonExceptions(u.getUsername())));
+    }
+
+    @DeleteMapping("/salon/exceptions/{exceptionId}")
+    public ResponseEntity<ApiResponse<?>> deleteSalonException(
+            @PathVariable UUID exceptionId,
+            @AuthenticationPrincipal UserDetails u) {
+        ownerService.deleteSalonException(exceptionId, u.getUsername());
+        return ResponseEntity.ok(ApiResponse.ok("Salon exception removed successfully"));
+    }
+
+    @PostMapping("/services/packages")
+    public ResponseEntity<ApiResponse<ServicePackageResponse>> addServicePackage(
+            @Valid @RequestBody ServicePackageRequest request,
+            @AuthenticationPrincipal UserDetails u) {
+        return ResponseEntity.ok(ApiResponse.success(ownerService.addServicePackage(request, u.getUsername())));
+    }
+
+    @PutMapping("/services/packages/{id}")
+    public ResponseEntity<ApiResponse<ServicePackageResponse>> updateServicePackage(
+            @PathVariable UUID id,
+            @Valid @RequestBody ServicePackageRequest request,
+            @AuthenticationPrincipal UserDetails u) {
+        return ResponseEntity.ok(ApiResponse.success(ownerService.updateServicePackage(id, request, u.getUsername())));
+    }
+
+    @GetMapping("/services/packages")
+    public ResponseEntity<ApiResponse<List<ServicePackageResponse>>> getServicePackages(
+            @AuthenticationPrincipal UserDetails u) {
+        return ResponseEntity.ok(ApiResponse.success(ownerService.getServicePackages(u.getUsername())));
+    }
+
+    @DeleteMapping("/services/packages/{id}")
+    public ResponseEntity<ApiResponse<?>> deleteServicePackage(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserDetails u) {
+        ownerService.deleteServicePackage(id, u.getUsername());
+        return ResponseEntity.ok(ApiResponse.ok("Combo package removed successfully"));
+    }
+
+    @PostMapping("/salon/gallery")
+    public ResponseEntity<ApiResponse<SalonGalleryResponse>> addGalleryItem(
+            @Valid @RequestBody SalonGalleryRequest request,
+            @AuthenticationPrincipal UserDetails u) {
+        return ResponseEntity.ok(ApiResponse.success(ownerService.addGalleryItem(request, u.getUsername())));
+    }
+
+    @GetMapping("/salon/gallery")
+    public ResponseEntity<ApiResponse<List<SalonGalleryResponse>>> getGalleryItems(
+            @AuthenticationPrincipal UserDetails u) {
+        return ResponseEntity.ok(ApiResponse.success(ownerService.getGalleryItems(u.getUsername())));
+    }
+
+    @DeleteMapping("/salon/gallery/{itemId}")
+    public ResponseEntity<ApiResponse<?>> deleteGalleryItem(
+            @PathVariable UUID itemId,
+            @AuthenticationPrincipal UserDetails u) {
+        ownerService.deleteGalleryItem(itemId, u.getUsername());
+        return ResponseEntity.ok(ApiResponse.ok("Gallery item removed successfully"));
     }
 }

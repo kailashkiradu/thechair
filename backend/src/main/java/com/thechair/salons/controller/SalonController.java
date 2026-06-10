@@ -4,6 +4,8 @@ import com.thechair.common.dto.ApiResponse;
 import com.thechair.services.dto.OfferingResponse;
 import com.thechair.salons.dto.SalonResponse;
 import com.thechair.bookings.dto.SlotResponse;
+import com.thechair.salons.dto.SalonGalleryResponse;
+import com.thechair.services.dto.ServicePackageResponse;
 import com.thechair.salons.service.SalonService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -43,5 +45,17 @@ public class SalonController {
             @RequestParam UUID serviceId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(ApiResponse.success(salonService.getAvailableSlots(id, serviceId, date)));
+    }
+
+    @GetMapping("/{id}/gallery")
+    public ResponseEntity<ApiResponse<List<SalonGalleryResponse>>> getSalonGallery(
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success(salonService.getSalonGallery(id)));
+    }
+
+    @GetMapping("/{id}/packages")
+    public ResponseEntity<ApiResponse<List<ServicePackageResponse>>> getSalonPackages(
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success(salonService.getSalonPackages(id)));
     }
 }

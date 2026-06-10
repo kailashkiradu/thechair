@@ -52,4 +52,47 @@ export const ownerApi = {
 
   createWalkInBooking: (data: { slotId: string; customerName: string; customerPhone?: string; notes?: string }) =>
     api.post<ApiResponse<Booking>>('/owner/bookings/walk-in', data).then(r => r.data.data),
+
+  // Staff Leaves
+  addStaffLeave: (staffId: string, data: { leaveDate: string; startTime?: string | null; endTime?: string | null; reason?: string }) =>
+    api.post<ApiResponse<any>>(`/owner/staff/${staffId}/leaves`, data).then(r => r.data.data),
+
+  getStaffLeaves: (staffId: string) =>
+    api.get<ApiResponse<any[]>>(`/owner/staff/${staffId}/leaves`).then(r => r.data.data),
+
+  deleteStaffLeave: (leaveId: string) =>
+    api.delete<ApiResponse<void>>(`/owner/staff/leaves/${leaveId}`),
+
+  // Salon Exceptions (Closures/Holidays)
+  addSalonException: (data: { exceptionDate: string; isClosed: boolean; openTime?: string | null; closeTime?: string | null; reason?: string }) =>
+    api.post<ApiResponse<any>>('/owner/salon/exceptions', data).then(r => r.data.data),
+
+  getSalonExceptions: () =>
+    api.get<ApiResponse<any[]>>('/owner/salon/exceptions').then(r => r.data.data),
+
+  deleteSalonException: (exceptionId: string) =>
+    api.delete<ApiResponse<void>>(`/owner/salon/exceptions/${exceptionId}`),
+
+  // Combo Packages
+  addServicePackage: (data: { name: string; description?: string; price: number; offeringIds: string[] }) =>
+    api.post<ApiResponse<any>>('/owner/services/packages', data).then(r => r.data.data),
+
+  updateServicePackage: (packageId: string, data: { name: string; description?: string; price: number; offeringIds: string[] }) =>
+    api.put<ApiResponse<any>>(`/owner/services/packages/${packageId}`, data).then(r => r.data.data),
+
+  getServicePackages: () =>
+    api.get<ApiResponse<any[]>>('/owner/services/packages').then(r => r.data.data),
+
+  deleteServicePackage: (packageId: string) =>
+    api.delete<ApiResponse<void>>(`/owner/services/packages/${packageId}`),
+
+  // Gallery
+  addGalleryItem: (data: { imageUrl: string; imageType: string; description?: string }) =>
+    api.post<ApiResponse<any>>('/owner/salon/gallery', data).then(r => r.data.data),
+
+  getGalleryItems: () =>
+    api.get<ApiResponse<any[]>>('/owner/salon/gallery').then(r => r.data.data),
+
+  deleteGalleryItem: (itemId: string) =>
+    api.delete<ApiResponse<void>>(`/owner/salon/gallery/${itemId}`),
 }

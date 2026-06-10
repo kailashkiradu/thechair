@@ -3,6 +3,8 @@ package com.thechair.staff.controller;
 import com.thechair.common.dto.ApiResponse;
 import com.thechair.staff.dto.StaffRequest;
 import com.thechair.staff.dto.StaffResponse;
+import com.thechair.staff.dto.StaffLeaveRequest;
+import com.thechair.staff.dto.StaffLeaveResponse;
 import com.thechair.staff.service.StaffService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -61,5 +63,28 @@ public class StaffController {
             @AuthenticationPrincipal UserDetails u) {
         staffService.deleteStaff(id, u.getUsername());
         return ResponseEntity.ok(ApiResponse.ok("Staff member removed successfully"));
+    }
+
+    @PostMapping("/owner/staff/{staffId}/leaves")
+    public ResponseEntity<ApiResponse<StaffLeaveResponse>> addStaffLeave(
+            @PathVariable UUID staffId,
+            @Valid @RequestBody StaffLeaveRequest request,
+            @AuthenticationPrincipal UserDetails u) {
+        return ResponseEntity.ok(ApiResponse.success(staffService.addStaffLeave(staffId, request, u.getUsername())));
+    }
+
+    @GetMapping("/owner/staff/{staffId}/leaves")
+    public ResponseEntity<ApiResponse<List<StaffLeaveResponse>>> getStaffLeaves(
+            @PathVariable UUID staffId,
+            @AuthenticationPrincipal UserDetails u) {
+        return ResponseEntity.ok(ApiResponse.success(staffService.getStaffLeaves(staffId, u.getUsername())));
+    }
+
+    @DeleteMapping("/owner/staff/leaves/{leaveId}")
+    public ResponseEntity<ApiResponse<?>> deleteStaffLeave(
+            @PathVariable UUID leaveId,
+            @AuthenticationPrincipal UserDetails u) {
+        staffService.deleteStaffLeave(leaveId, u.getUsername());
+        return ResponseEntity.ok(ApiResponse.ok("Staff leave removed successfully"));
     }
 }
