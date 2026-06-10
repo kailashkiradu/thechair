@@ -25,8 +25,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 to={to}
                 className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors
                   ${pathname === to
-                    ? 'bg-chair-accent text-black font-semibold'
-                    : 'text-gray-400 hover:text-white hover:bg-chair-card'}`}
+                    ? 'bg-chair-accent text-white font-semibold'
+                    : 'text-chair-text-muted hover:text-chair-text hover:bg-chair-border/30'}`}
               >
                 <Icon size={16} />
                 {label}

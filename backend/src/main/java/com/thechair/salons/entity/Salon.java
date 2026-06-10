@@ -44,6 +44,12 @@ public class Salon {
     @Column(name = "image_url")
     private String imageUrl;
 
+    @Column
+    private Double latitude;
+
+    @Column
+    private Double longitude;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SalonStatus status;

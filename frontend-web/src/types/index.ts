@@ -39,6 +39,9 @@ export interface Salon {
   ownerId: string
   ownerName: string
   createdAt: string
+  latitude?: number
+  longitude?: number
+  distance?: number
 }
 
 export interface Staff {

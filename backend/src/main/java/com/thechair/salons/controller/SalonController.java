@@ -25,8 +25,11 @@ public class SalonController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<SalonResponse>>> getSalons(
-            @RequestParam(required = false) String query) {
-        return ResponseEntity.ok(ApiResponse.success(salonService.getApprovedSalons(query)));
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) Double latitude,
+            @RequestParam(required = false) Double longitude,
+            @RequestParam(required = false) Double radius) {
+        return ResponseEntity.ok(ApiResponse.success(salonService.getApprovedSalons(query, latitude, longitude, radius)));
     }
 
     @GetMapping("/{id}")

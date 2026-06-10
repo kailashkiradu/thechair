@@ -14,6 +14,7 @@ export default function Slots() {
   const qc = useQueryClient()
   const [modal, setModal] = useState(false)
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [dateMode, setDateMode] = useState<'single' | 'range' | 'weekend'>('single')
   const [form, setForm] = useState({
     offeringId: '', date: format(new Date(), 'yyyy-MM-dd'), startTime: '09:00', endTime: '18:00', staffId: '',
   })
@@ -33,14 +34,66 @@ export default function Slots() {
     queryFn: () => ownerApi.getSlots(selectedDate),
   })
 
+  const getTargetDates = (mode: 'single' | 'range' | 'weekend', baseDate: string): string[] => {
+    const datesList: string[] = []
+    const start = new Date(baseDate)
+    if (mode === 'single') {
+      datesList.push(baseDate)
+    } else if (mode === 'range') {
+      for (let i = 0; i < 7; i++) {
+        datesList.push(format(addDays(start, i), 'yyyy-MM-dd'))
+      }
+    } else if (mode === 'weekend') {
+      for (let i = 0; i < 7; i++) {
+        const d = addDays(start, i)
+        const day = d.getDay()
+        if (day === 6 || day === 0) {
+          datesList.push(format(d, 'yyyy-MM-dd'))
+        }
+      }
+    }
+    return datesList
+  }
+
   const { mutate: generate, isPending } = useMutation({
-    mutationFn: () => ownerApi.generateSlots(form),
-    onSuccess: (slots) => {
-      toast.success(`${slots.length} slots generated!`)
+    mutationFn: async () => {
+      const dates = getTargetDates(dateMode, form.date)
+      const serviceIds = form.offeringId === 'all'
+        ? (services?.filter(s => s.active).map(s => s.id) || [])
+        : [form.offeringId]
+
+      if (serviceIds.length === 0) {
+        throw new Error('Please select at least one service')
+      }
+
+      let totalGenerated = 0
+      const promises = []
+      for (const serviceId of serviceIds) {
+        for (const dateVal of dates) {
+          promises.push(
+            ownerApi.generateSlots({
+              offeringId: serviceId,
+              date: dateVal,
+              startTime: form.startTime,
+              endTime: form.endTime,
+              staffId: form.staffId || undefined,
+            }).then(slots => {
+              totalGenerated += slots.length
+            })
+          )
+        }
+      }
+      await Promise.all(promises)
+      return totalGenerated
+    },
+    onSuccess: (total) => {
+      toast.success(`${total} slots successfully generated!`)
       qc.invalidateQueries({ queryKey: ['owner-slots'] })
       setModal(false)
     },
-    onError: (err: any) => toast.error(err.response?.data?.message || 'Failed'),
+    onError: (err: any) => {
+      toast.error(err.message || err.response?.data?.message || 'Failed to generate slots')
+    },
   })
 
   const dates = Array.from({ length: 14 }, (_, i) => addDays(new Date(), i))
@@ -112,16 +165,17 @@ export default function Slots() {
         <Modal open={modal} onClose={() => setModal(false)} title="Generate Slots">
           <form onSubmit={(e) => { e.preventDefault(); generate() }} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-300">Service *</label>
+              <label className="text-sm font-medium text-chair-text-muted">Service *</label>
               <select className="input-field" value={form.offeringId} onChange={set('offeringId')} required>
                 <option value="">Select a service</option>
+                <option value="all">★ All Active Services (Bulk)</option>
                 {services?.filter(s => s.active).map(s => (
                   <option key={s.id} value={s.id}>{s.name} ({s.duration} min)</option>
                 ))}
               </select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-300">Assign Stylist (Optional)</label>
+              <label className="text-sm font-medium text-chair-text-muted">Assign Stylist (Optional)</label>
               <select className="input-field" value={form.staffId} onChange={set('staffId')}>
                 <option value="">Any Available Stylist</option>
                 {staffList?.filter(s => s.available).map(s => (
@@ -129,8 +183,32 @@ export default function Slots() {
                 ))}
               </select>
             </div>
+
+            {/* Date Mode Selector */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-300">Date *</label>
+              <label className="text-sm font-medium text-chair-text-muted">Scheduling Period</label>
+              <div className="grid grid-cols-3 gap-2 bg-chair-surface/50 border border-chair-border p-1 rounded-lg">
+                {(['single', 'range', 'weekend'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setDateMode(mode)}
+                    className={`py-1.5 rounded text-xs font-semibold capitalize transition-all ${
+                      dateMode === mode
+                        ? 'bg-chair-accent text-white shadow-sm'
+                        : 'text-chair-text-muted hover:text-chair-text'
+                    }`}
+                  >
+                    {mode === 'single' ? 'Single Day' : mode === 'range' ? '7 Days' : 'Weekend Only'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-chair-text-muted">
+                {dateMode === 'single' ? 'Date *' : 'Start Date (Reference) *'}
+              </label>
               <input
                 type="date"
                 className="input-field"
@@ -139,18 +217,64 @@ export default function Slots() {
                 onChange={set('date')}
                 required
               />
+              {dateMode === 'range' && (
+                <p className="text-[11px] text-chair-accent mt-0.5 font-medium">
+                  Note: Slots will be generated for 7 consecutive days starting from the selected date.
+                </p>
+              )}
+              {dateMode === 'weekend' && (
+                <p className="text-[11px] text-chair-accent mt-0.5 font-medium">
+                  Note: Slots will be generated for Saturday & Sunday within the next 7 days from the selected date.
+                </p>
+              )}
             </div>
+
+            {/* Time Shift Presets */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-chair-text-muted">Time Presets</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, startTime: '09:00', endTime: '18:00' }))}
+                  className="border border-chair-border hover:border-chair-accent/40 rounded-lg p-2 text-xs font-medium bg-chair-card hover:bg-chair-border/20 text-chair-text transition-colors"
+                >
+                  Full Day (9 AM - 6 PM)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, startTime: '09:00', endTime: '13:00' }))}
+                  className="border border-chair-border hover:border-chair-accent/40 rounded-lg p-2 text-xs font-medium bg-chair-card hover:bg-chair-border/20 text-chair-text transition-colors"
+                >
+                  Morning (9 AM - 1 PM)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, startTime: '13:00', endTime: '18:00' }))}
+                  className="border border-chair-border hover:border-chair-accent/40 rounded-lg p-2 text-xs font-medium bg-chair-card hover:bg-chair-border/20 text-chair-text transition-colors"
+                >
+                  Afternoon (1 PM - 6 PM)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, startTime: '18:00', endTime: '21:00' }))}
+                  className="border border-chair-border hover:border-chair-accent/40 rounded-lg p-2 text-xs font-medium bg-chair-card hover:bg-chair-border/20 text-chair-text transition-colors"
+                >
+                  Evening (6 PM - 9 PM)
+                </button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-300">Start Time *</label>
+                <label className="text-sm font-medium text-chair-text-muted">Start Time *</label>
                 <input type="time" className="input-field" value={form.startTime} onChange={set('startTime')} required />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-300">End Time *</label>
+                <label className="text-sm font-medium text-chair-text-muted">End Time *</label>
                 <input type="time" className="input-field" value={form.endTime} onChange={set('endTime')} required />
               </div>
             </div>
-            <p className="text-xs text-gray-500">Slots are auto-generated based on service duration.</p>
+            <p className="text-xs text-chair-text-muted/70">Slots are auto-generated based on service duration.</p>
             <Button type="submit" loading={isPending} className="w-full">Generate</Button>
           </form>
         </Modal>

@@ -21,4 +21,6 @@ public class SalonRequest {
     private String email;
     private String category;
     private String imageUrl;
+    private Double latitude;
+    private Double longitude;
 }

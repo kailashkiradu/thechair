@@ -88,6 +88,8 @@ public class OwnerService {
                 .email(request.getEmail())
                 .category(request.getCategory())
                 .imageUrl(request.getImageUrl())
+                .latitude(request.getLatitude())
+                .longitude(request.getLongitude())
                 .owner(owner)
                 .status(com.thechair.salons.entity.SalonStatus.APPROVED)
                 .build();
@@ -104,6 +106,8 @@ public class OwnerService {
         salon.setPhone(request.getPhone());
         salon.setEmail(request.getEmail());
         salon.setCategory(request.getCategory());
+        salon.setLatitude(request.getLatitude());
+        salon.setLongitude(request.getLongitude());
         if (request.getImageUrl() != null) salon.setImageUrl(request.getImageUrl());
         return SalonResponse.from(salonRepository.save(salon));
     }
@@ -158,13 +162,20 @@ public class OwnerService {
             throw new BadRequestException("Cannot generate slots for past dates");
         }
 
-        Staff staff = null;
+        List<Staff> staffToGenerate = new ArrayList<>();
         if (request.getStaffId() != null) {
-            staff = staffRepository.findById(request.getStaffId())
+            Staff s = staffRepository.findById(request.getStaffId())
                     .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
-            if (!staff.getSalon().getId().equals(salon.getId())) {
+            if (!s.getSalon().getId().equals(salon.getId())) {
                 throw new BadRequestException("Staff does not belong to your salon");
             }
+            staffToGenerate.add(s);
+        } else {
+            List<Staff> activeStaff = staffRepository.findBySalonIdAndAvailable(salon.getId(), true);
+            if (activeStaff.isEmpty()) {
+                throw new BadRequestException("No available stylists registered for this salon. Please add at least one stylist first.");
+            }
+            staffToGenerate.addAll(activeStaff);
         }
 
         Optional<SalonException> exceptionOpt = salonExceptionRepository.findBySalonIdAndExceptionDate(salon.getId(), request.getDate());
@@ -185,52 +196,47 @@ public class OwnerService {
         }
 
         List<TimeSlot> slots = new ArrayList<>();
-        LocalTime cursor = allowedStart;
         int duration = offering.getDuration();
 
-        List<StaffLeave> leaves = (staff != null)
-                ? staffLeaveRepository.findByStaffIdAndLeaveDate(staff.getId(), request.getDate())
-                : List.of();
+        for (Staff staff : staffToGenerate) {
+            LocalTime cursor = allowedStart;
+            List<StaffLeave> leaves = staffLeaveRepository.findByStaffIdAndLeaveDate(staff.getId(), request.getDate());
 
-        while (!cursor.plusMinutes(duration).isAfter(allowedEnd)) {
-            LocalTime end = cursor.plusMinutes(duration);
+            while (!cursor.plusMinutes(duration).isAfter(allowedEnd)) {
+                LocalTime end = cursor.plusMinutes(duration);
 
-            boolean onLeave = false;
-            for (StaffLeave leave : leaves) {
-                if (leave.getStartTime() == null || leave.getEndTime() == null) {
-                    onLeave = true;
-                    break;
-                } else {
-                    if (cursor.isBefore(leave.getEndTime()) && end.isAfter(leave.getStartTime())) {
+                boolean onLeave = false;
+                for (StaffLeave leave : leaves) {
+                    if (leave.getStartTime() == null || leave.getEndTime() == null) {
                         onLeave = true;
                         break;
+                    } else {
+                        if (cursor.isBefore(leave.getEndTime()) && end.isAfter(leave.getStartTime())) {
+                            onLeave = true;
+                            break;
+                        }
                     }
                 }
-            }
 
-            if (onLeave) {
+                if (onLeave) {
+                    cursor = end;
+                    continue;
+                }
+
+                boolean exists = timeSlotRepository.existsBySalonAndOfferingAndStaffAndDateAndStartTime(salon, offering, staff, request.getDate(), cursor);
+
+                if (!exists) {
+                    slots.add(TimeSlot.builder()
+                            .salon(salon)
+                            .offering(offering)
+                            .staff(staff)
+                            .date(request.getDate())
+                            .startTime(cursor)
+                            .endTime(end)
+                            .build());
+                }
                 cursor = end;
-                continue;
             }
-
-            boolean exists = false;
-            if (staff != null) {
-                exists = timeSlotRepository.existsByStaffAndDateAndStartTime(staff, request.getDate(), cursor);
-            } else {
-                exists = timeSlotRepository.existsBySalonAndOfferingAndDateAndStartTime(salon, offering, request.getDate(), cursor);
-            }
-
-            if (!exists) {
-                slots.add(TimeSlot.builder()
-                        .salon(salon)
-                        .offering(offering)
-                        .staff(staff)
-                        .date(request.getDate())
-                        .startTime(cursor)
-                        .endTime(end)
-                        .build());
-            }
-            cursor = end;
         }
 
         return timeSlotRepository.saveAll(slots).stream().map(SlotResponse::from).toList();

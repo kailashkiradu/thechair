@@ -2,8 +2,8 @@ import api from './axios'
 import { ApiResponse, Offering, Salon, TimeSlot } from '../types'
 
 export const salonsApi = {
-  getAll: (query?: string) =>
-    api.get<ApiResponse<Salon[]>>('/salons', { params: { query } }).then(r => r.data.data),
+  getAll: (params?: { query?: string; latitude?: number; longitude?: number; radius?: number }) =>
+    api.get<ApiResponse<Salon[]>>('/salons', { params }).then(r => r.data.data),
 
   getById: (id: string) =>
     api.get<ApiResponse<Salon>>(`/salons/${id}`).then(r => r.data.data),

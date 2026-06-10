@@ -18,6 +18,7 @@ export default function Book() {
   const qc = useQueryClient()
   const serviceId = params.get('serviceId') ?? ''
   const date = params.get('date') ?? ''
+  const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
   const [notes, setNotes] = useState('')
 
@@ -89,28 +90,71 @@ export default function Book() {
         ) : (
           <>
             <div className="grid grid-cols-3 gap-3 mb-8">
-              {slots.map((slot) => (
-                <button
-                  key={slot.id}
-                  onClick={() => setSelectedSlot(slot.id)}
-                  className={`p-3 rounded-lg border text-center transition-colors
-                    ${selectedSlot === slot.id
-                      ? 'border-chair-accent bg-chair-accent/10 text-chair-accent'
-                      : 'border-chair-border hover:border-chair-accent/50 text-gray-300'}`}
-                >
-                  <div className="font-semibold text-sm">{slot.startTime}</div>
-                  <div className="text-xs text-gray-500">to {slot.endTime}</div>
-                </button>
-              ))}
+              {Array.from(new Set(slots?.map(s => s.startTime) || [])).sort().map((time) => {
+                const isSelected = selectedTime === time
+                return (
+                  <button
+                    key={time}
+                    onClick={() => {
+                      setSelectedTime(time)
+                      setSelectedSlot(null) // reset stylist selection on time change
+                    }}
+                    className={`p-3 rounded-lg border text-center transition-colors
+                      ${isSelected
+                        ? 'border-chair-accent bg-chair-accent/10 text-chair-accent font-semibold'
+                        : 'border-chair-border hover:border-chair-accent/50 text-chair-text-muted hover:text-chair-text'}`}
+                  >
+                    <div className="text-sm">{time}</div>
+                  </button>
+                )
+              })}
             </div>
+
+            {/* Stylist Selector */}
+            {selectedTime && (
+              <div className="flex flex-col gap-3 mb-8">
+                <label className="text-sm font-semibold text-chair-text">Select an Available Stylist *</label>
+                <div className="flex flex-col gap-2">
+                  {slots.filter(s => s.startTime === selectedTime).map((slot) => {
+                    const isSelected = selectedSlot === slot.id
+                    return (
+                      <button
+                        key={slot.id}
+                        type="button"
+                        onClick={() => setSelectedSlot(slot.id)}
+                        className={`flex items-center justify-between p-3.5 rounded-xl border transition-all text-left ${
+                          isSelected
+                            ? 'border-chair-accent bg-chair-accent/5'
+                            : 'border-chair-border hover:border-chair-accent/30 bg-chair-card/50'
+                        }`}
+                      >
+                        <div>
+                          <p className="font-bold text-sm text-chair-text">
+                            {slot.staffName || 'Any Available Stylist'}
+                          </p>
+                          <p className="text-xs text-chair-text-muted mt-0.5">
+                            Shift: {slot.startTime} – {slot.endTime}
+                          </p>
+                        </div>
+                        <div className="w-5 h-5 rounded-full border border-chair-border flex items-center justify-center shrink-0">
+                          {isSelected && (
+                            <div className="w-3 h-3 rounded-full bg-chair-accent" />
+                          )}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {selectedSlot && (
               <div className="card mb-6">
-                <label className="text-sm font-medium text-gray-300 block mb-2">
+                <label className="text-sm font-medium text-chair-text-muted block mb-2">
                   Notes (optional)
                 </label>
                 <textarea
-                  className="input-field resize-none"
+                  className="input-field resize-none bg-chair-surface/50"
                   rows={3}
                   placeholder="Any special requests..."
                   value={notes}

@@ -2,15 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --chair-bg: 249 250 251; /* #f9fafb */
+  --chair-surface: 255 255 255; /* #ffffff */
+  --chair-card: 255 255 255; /* #ffffff */
+  --chair-border: 229 231 235; /* #e5e7eb */
+  --chair-accent: 217 119 6; /* #d97706 */
+  --chair-accent-dark: 180 83 9; /* #b45309 */
+  --chair-muted: 156 163 175; /* #9ca3af */
+  --chair-text: 17 24 39; /* #111827 */
+  --chair-text-muted: 75 85 99; /* #4b5563 */
+}
+
+.dark {
+  --chair-bg: 10 10 10; /* #0a0a0a */
+  --chair-surface: 20 20 20; /* #141414 */
+  --chair-card: 30 30 30; /* #1e1e1e */
+  --chair-border: 42 42 42; /* #2a2a2a */
+  --chair-accent: 245 158 11; /* #f59e0b */
+  --chair-accent-dark: 217 119 6; /* #d97706 */
+  --chair-muted: 82 82 82; /* #525252 */
+  --chair-text: 255 255 255; /* #ffffff */
+  --chair-text-muted: 156 163 175; /* #9ca3af */
+}
+
 @layer base {
   * {
     box-sizing: border-box;
   }
   body {
-    background-color: #0a0a0a;
-    color: #ffffff;
+    @apply bg-chair-bg text-chair-text;
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
   input, textarea, select {
     outline: none;
@@ -19,15 +43,15 @@
 
 @layer components {
   .input-field {
-    @apply w-full bg-chair-card border border-chair-border rounded-lg px-4 py-3 text-white placeholder-chair-muted focus:border-chair-accent transition-colors;
+    @apply w-full bg-chair-card border border-chair-border rounded-lg px-4 py-3 text-chair-text placeholder-chair-text-muted/65 focus:border-chair-accent transition-colors;
   }
   .btn-primary {
-    @apply bg-chair-accent hover:bg-chair-accent-dark text-black font-semibold px-6 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-chair-accent hover:bg-chair-accent-dark text-white font-semibold px-6 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-secondary {
-    @apply bg-chair-card hover:bg-chair-border text-white font-medium px-6 py-3 rounded-lg border border-chair-border transition-colors;
+    @apply bg-chair-card hover:bg-chair-border text-chair-text font-medium px-6 py-3 rounded-lg border border-chair-border transition-colors;
   }
   .card {
-    @apply bg-chair-card border border-chair-border rounded-xl p-6;
+    @apply bg-chair-card border border-chair-border rounded-xl p-6 shadow-sm;
   }
 }

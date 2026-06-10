@@ -25,6 +25,9 @@ public class SalonResponse {
     private UUID ownerId;
     private String ownerName;
     private LocalDateTime createdAt;
+    private Double latitude;
+    private Double longitude;
+    private Double distance; // calculated distance in km
 
     public static SalonResponse from(Salon salon) {
         return SalonResponse.builder()
@@ -42,6 +45,8 @@ public class SalonResponse {
                 .ownerId(salon.getOwner().getId())
                 .ownerName(salon.getOwner().getName())
                 .createdAt(salon.getCreatedAt())
+                .latitude(salon.getLatitude())
+                .longitude(salon.getLongitude())
                 .build();
     }
 }

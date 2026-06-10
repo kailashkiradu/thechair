@@ -11,11 +11,21 @@ import Modal from '../../components/ui/Modal'
 
 const CATEGORIES = ['UNISEX', 'MENS', 'WOMENS', 'SPA', 'BARBERSHOP']
 
+const SALON_PRESETS = [
+  { url: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80', label: 'Modern Salon' },
+  { url: 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=600&q=80', label: 'Luxury Spa' },
+  { url: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=600&q=80', label: 'Classic Barber' },
+  { url: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&w=600&q=80', label: 'Hair Styling' },
+  { url: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=600&q=80', label: 'Nail Salon' },
+  { url: 'https://images.unsplash.com/photo-1517832207067-4db24a2ae47c?auto=format&fit=crop&w=600&q=80', label: 'Esthetics/Facial' },
+]
+
 export default function SalonSetup() {
   const qc = useQueryClient()
   const [activeTab, setActiveTab] = useState<'details' | 'gallery' | 'exceptions'>('details')
   const [form, setForm] = useState({
     name: '', description: '', address: '', city: '', phone: '', email: '', category: 'UNISEX', imageUrl: '',
+    latitude: undefined as number | undefined, longitude: undefined as number | undefined
   })
 
   // Gallery states
@@ -102,6 +112,8 @@ export default function SalonSetup() {
       email: salon.email ?? '',
       category: salon.category ?? 'UNISEX',
       imageUrl: salon.imageUrl ?? '',
+      latitude: salon.latitude,
+      longitude: salon.longitude,
     })
   }, [salon])
 
@@ -156,7 +168,7 @@ export default function SalonSetup() {
             <Input label="Salon Name *" value={form.name} onChange={set('name')} required placeholder="e.g. Style Studio" />
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-300">Description</label>
+              <label className="text-sm font-medium text-chair-text-muted">Description</label>
               <textarea
                 className="input-field resize-none"
                 rows={3}
@@ -168,11 +180,55 @@ export default function SalonSetup() {
 
             <Input label="Address *" value={form.address} onChange={set('address')} required placeholder="123 Anna Salai" />
             <Input label="City *" value={form.city} onChange={set('city')} required placeholder="Chennai" />
+            
+            {/* Proximity Location Inputs */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-chair-text-muted block mb-1.5">Latitude</label>
+                <input
+                  type="number"
+                  step="any"
+                  className="input-field"
+                  placeholder="e.g. 13.0827"
+                  value={form.latitude ?? ''}
+                  onChange={e => setForm(f => ({ ...f, latitude: e.target.value ? parseFloat(e.target.value) : undefined }))}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-chair-text-muted block mb-1.5">Longitude</label>
+                <input
+                  type="number"
+                  step="any"
+                  className="input-field"
+                  placeholder="e.g. 80.2707"
+                  value={form.longitude ?? ''}
+                  onChange={e => setForm(f => ({ ...f, longitude: e.target.value ? parseFloat(e.target.value) : undefined }))}
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.geolocation.getCurrentPosition(
+                  (pos) => {
+                    setForm(f => ({ ...f, latitude: pos.coords.latitude, longitude: pos.coords.longitude }))
+                    toast.success('Retrieved device coordinates successfully!')
+                  },
+                  () => {
+                    toast.error('Could not auto-fetch location. Please enter manually.')
+                  }
+                )
+              }}
+              className="text-xs text-chair-accent hover:text-chair-accent-dark hover:underline flex items-center gap-1.5 self-start -mt-2 mb-1 font-semibold"
+            >
+              📍 Fetch device coordinates
+            </button>
+
             <Input label="Phone" type="tel" value={form.phone} onChange={set('phone')} placeholder="9876543210" />
             <Input label="Email" type="email" value={form.email} onChange={set('email')} placeholder="salon@example.com" />
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-300">Category</label>
+              <label className="text-sm font-medium text-chair-text-muted">Category</label>
               <select
                 className="input-field"
                 value={form.category}
@@ -182,9 +238,51 @@ export default function SalonSetup() {
               </select>
             </div>
 
-            <Input label="Image URL" value={form.imageUrl} onChange={set('imageUrl')} placeholder="https://..." />
+            {/* Live image preview and Preset selection */}
+            <div className="flex flex-col gap-2.5">
+              <label className="text-sm font-medium text-chair-text-muted">Salon Cover Photo</label>
+              {form.imageUrl ? (
+                <div className="relative w-full h-44 rounded-xl overflow-hidden border border-chair-border shadow-inner group">
+                  <img src={form.imageUrl} alt="Salon preview" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, imageUrl: '' }))}
+                    className="absolute top-3 right-3 bg-black/75 hover:bg-black text-white text-xs px-2.5 py-1.5 rounded-full transition-colors font-medium border border-white/10"
+                  >
+                    ✕ Remove Image
+                  </button>
+                </div>
+              ) : (
+                <div className="w-full h-44 rounded-xl border border-dashed border-chair-border bg-chair-surface/30 flex flex-col items-center justify-center text-chair-text-muted gap-2">
+                  <Camera size={26} className="stroke-[1.5]" />
+                  <span className="text-xs">No cover image selected</span>
+                </div>
+              )}
 
-            <Button type="submit" loading={isPending} className="w-full mt-2">
+              <Input label="Image URL" value={form.imageUrl} onChange={set('imageUrl')} placeholder="https://..." />
+              
+              {/* Presets grid */}
+              <div className="flex flex-col gap-1.5 mt-1">
+                <span className="text-[10px] text-chair-text-muted uppercase tracking-wider font-bold">Select from Premium Presets:</span>
+                <div className="grid grid-cols-3 gap-2">
+                  {SALON_PRESETS.map((preset) => (
+                    <button
+                      key={preset.url}
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, imageUrl: preset.url }))}
+                      className="border border-chair-border hover:border-chair-accent/40 rounded-lg overflow-hidden group/btn relative aspect-video transition-all shadow-sm hover:scale-[1.02]"
+                    >
+                      <img src={preset.url} alt={preset.label} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 group-hover/btn:bg-black/20 transition-colors flex items-end p-1">
+                        <span className="text-[9px] text-white font-medium truncate w-full text-left">{preset.label}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <Button type="submit" loading={isPending} className="w-full mt-4">
               {salon ? 'Save Changes' : 'Register Salon'}
             </Button>
           </form>
@@ -294,6 +392,28 @@ export default function SalonSetup() {
             }}
             className="flex flex-col gap-4"
           >
+            {/* Live Preview Container */}
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-chair-text-muted">Image Preview</label>
+              {galleryForm.imageUrl ? (
+                <div className="relative w-full h-36 rounded-lg overflow-hidden border border-chair-border shadow-inner">
+                  <img src={galleryForm.imageUrl} alt="Gallery preview" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setGalleryForm(f => ({ ...f, imageUrl: '' }))}
+                    className="absolute top-2 right-2 bg-black/70 hover:bg-black text-white text-[10px] px-2 py-1 rounded-full transition-colors"
+                  >
+                    ✕ Clear
+                  </button>
+                </div>
+              ) : (
+                <div className="w-full h-36 rounded-lg border border-dashed border-chair-border bg-chair-surface/30 flex flex-col items-center justify-center text-chair-text-muted gap-1.5">
+                  <Camera size={22} />
+                  <span className="text-xs">No image selected</span>
+                </div>
+              )}
+            </div>
+
             <Input
               label="Image URL *"
               value={galleryForm.imageUrl}
@@ -301,8 +421,29 @@ export default function SalonSetup() {
               required
               placeholder="https://images.unsplash.com/..."
             />
+
+            {/* Presets grid */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-300">Category *</label>
+              <span className="text-[10px] text-chair-text-muted uppercase tracking-wider font-bold">Quick Select from Gallery Presets:</span>
+              <div className="grid grid-cols-3 gap-2">
+                {SALON_PRESETS.map((preset) => (
+                  <button
+                    key={preset.url}
+                    type="button"
+                    onClick={() => setGalleryForm(f => ({ ...f, imageUrl: preset.url }))}
+                    className="border border-chair-border hover:border-chair-accent/40 rounded-lg overflow-hidden group/btn relative aspect-video transition-all shadow-sm hover:scale-[1.02]"
+                  >
+                    <img src={preset.url} alt={preset.label} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/45 group-hover/btn:bg-black/20 transition-colors flex items-end p-1">
+                      <span className="text-[9px] text-white font-medium truncate w-full text-left">{preset.label}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-chair-text-muted">Category *</label>
               <select
                 className="input-field"
                 value={galleryForm.imageType}

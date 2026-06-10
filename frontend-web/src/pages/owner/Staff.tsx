@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Users, ToggleLeft, ToggleRight, Trash2, Edit2, Calendar } from 'lucide-react'
+import { Plus, Users, ToggleLeft, ToggleRight, Trash2, Edit2, Calendar, Camera } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { ownerApi } from '../../api/owner'
 import OwnerLayout from '../../components/layout/OwnerLayout'
@@ -8,6 +8,15 @@ import Spinner from '../../components/ui/Spinner'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
+
+const STAFF_PRESETS = [
+  { url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80', label: 'Female 1' },
+  { url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80', label: 'Male 1' },
+  { url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80', label: 'Female 2' },
+  { url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80', label: 'Male 2' },
+  { url: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=300&q=80', label: 'Female 3' },
+  { url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=300&q=80', label: 'Male 3' },
+]
 
 export default function Staff() {
   const qc = useQueryClient()
@@ -210,7 +219,7 @@ export default function Staff() {
               placeholder="e.g. Master Stylist, Color expert"
             />
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-300">Experience (Years)</label>
+              <label className="text-sm font-medium text-chair-text-muted">Experience (Years)</label>
               <input
                 type="number"
                 min="0"
@@ -219,12 +228,53 @@ export default function Staff() {
                 onChange={e => setForm(f => ({ ...f, experienceYears: parseInt(e.target.value) || 0 }))}
               />
             </div>
-            <Input
-              label="Photo URL"
-              value={form.photoUrl}
-              onChange={e => setForm(f => ({ ...f, photoUrl: e.target.value }))}
-              placeholder="https://images.unsplash.com/..."
-            />
+
+            {/* Photo preview & Presets */}
+            <div className="flex flex-col gap-2.5">
+              <label className="text-sm font-medium text-chair-text-muted">Profile Photo</label>
+              {form.photoUrl ? (
+                <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-chair-accent shadow mx-auto group">
+                  <img src={form.photoUrl} alt="Stylist preview" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, photoUrl: '' }))}
+                    className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-semibold"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div className="w-20 h-20 rounded-full border border-dashed border-chair-border bg-chair-surface/30 flex flex-col items-center justify-center text-chair-text-muted gap-1 mx-auto">
+                  <Camera size={20} />
+                  <span className="text-[10px]">No Photo</span>
+                </div>
+              )}
+
+              <Input
+                label="Photo URL"
+                value={form.photoUrl}
+                onChange={e => setForm(f => ({ ...f, photoUrl: e.target.value }))}
+                placeholder="https://images.unsplash.com/..."
+              />
+
+              <div className="flex flex-col gap-1.5 mt-1">
+                <span className="text-[10px] text-chair-text-muted uppercase tracking-wider font-bold">Select Stylist Photo Preset:</span>
+                <div className="grid grid-cols-6 gap-2">
+                  {STAFF_PRESETS.map((preset) => (
+                    <button
+                      key={preset.url}
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, photoUrl: preset.url }))}
+                      className="border border-chair-border hover:border-chair-accent/40 rounded-full overflow-hidden aspect-square transition-all hover:scale-105"
+                      title={preset.label}
+                    >
+                      <img src={preset.url} alt={preset.label} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             <Button type="submit" loading={isPending} className="w-full mt-2">
               {editingId ? 'Update Stylist' : 'Onboard Stylist'}
             </Button>

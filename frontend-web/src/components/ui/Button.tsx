@@ -7,10 +7,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants = {
-  primary: 'bg-chair-accent hover:bg-chair-accent-dark text-black font-semibold',
-  secondary: 'bg-chair-card hover:bg-chair-border text-white border border-chair-border',
+  primary: 'bg-chair-accent hover:bg-chair-accent-dark text-white font-semibold',
+  secondary: 'bg-chair-card hover:bg-chair-border/30 text-chair-text border border-chair-border',
   danger: 'bg-red-600 hover:bg-red-700 text-white font-semibold',
-  ghost: 'text-chair-accent hover:bg-chair-card',
+  ghost: 'text-chair-accent hover:bg-chair-border/20',
 }
 
 const sizes = {

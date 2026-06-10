@@ -23,7 +23,7 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
       <div className="relative bg-chair-card border border-chair-border rounded-2xl w-full max-w-lg shadow-2xl">
         <div className="flex items-center justify-between p-6 border-b border-chair-border">
           <h2 className="text-lg font-semibold">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+          <button onClick={onClose} className="text-chair-text-muted hover:text-chair-text transition-colors">
             <X size={20} />
           </button>
         </div>
